@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Tempo</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <h1>Gestão de Tempo</h1>
+
+    <form method="POST" action="/add">
+        <input type="text" name="name" placeholder="Nome da tarefa" required>
+        <input type="number" name="estimated_time" placeholder="Tempo estimado (min)" required min="1">
+        <select name="priority">
+            <option value="Alta">Alta</option>
+            <option value="Média">Média</option>
+            <option value="Baixa">Baixa</option>
+        </select>
+        <select name="category">
+            <option value="Trabalho">Trabalho</option>
+            <option value="Estudo">Estudo</option>
+            <option value="Pessoal">Pessoal</option>
+        </select>
+        <button type="submit">Adicionar Tarefa</button>
+    </form>
+
+    <h2>Tarefas</h2>
+    <ul>
+        {% for task in tasks %}
+        <li>
+            {{ task.name }} - {{ task.estimated_time }} min - {{ task.priority }} - {{ task.category }}
+            <button onclick="deleteTask('{{ task.name }}')">Excluir</button>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <button onclick="getSuggestions()">Sugerir Horários</button>
+    <div id="suggestions"></div>
+
+    <script>
+        function getSuggestions() {
+            fetch('/suggest_times')
+                .then(response => response.json())
+                .then(data => {
+                    let div = document.getElementById('suggestions');
+                    div.innerHTML = '';
+
+                    data.suggested_slots.forEach(slot => {
+                        let slotDiv = document.createElement('div');
+                        slotDiv.innerHTML = `<strong>${slot.block_time}:</strong>`;
+                        let taskList = document.createElement('ul');
+
+                        slot.tasks.forEach(task => {
+                            let taskItem = document.createElement('li');
+                            taskItem.textContent = `${task.name} - ${task.time} min`;
+                            taskList.appendChild(taskItem);
+                        });
+
+                        slotDiv.appendChild(taskList);
+                        div.appendChild(slotDiv);
+                    });
+                });
+        }
+
+        function deleteTask(taskName) {
+            if (confirm(`Tem certeza que deseja excluir a tarefa "${taskName}"?`)) {
+                fetch('/delete_task', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name: taskName }),
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            alert(data.error);
+                        } else {
+                            alert(data.message);
+                            location.reload();
+                        }
+                    })
+                    .catch(error => console.error('Erro:', error));
+            }
+        }
+    </script>
+</body>
+
+</html>
